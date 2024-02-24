@@ -1,0 +1,3 @@
+# Ignore these files when committing to git
+
+calibration/snapshots**
