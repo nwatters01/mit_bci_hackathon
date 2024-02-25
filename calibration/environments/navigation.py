@@ -140,6 +140,7 @@ class NavBase(abstract_environment.AbstractEnvironment):
                  path_sampler,
                  num_trials=10,
                  reward_freq_threshold=5,
+                 target_action_scale=0.1,
                  backwards_prob=0.5,
                  ready_steps=30,
                  set_steps=30,
@@ -156,6 +157,7 @@ class NavBase(abstract_environment.AbstractEnvironment):
         )
         
         self._reward_freq_threshold = reward_freq_threshold
+        self._target_action_scale = target_action_scale
         self._backwards_prob = backwards_prob
         self._ready_steps = ready_steps
         self._set_steps = set_steps
@@ -211,7 +213,7 @@ class NavBase(abstract_environment.AbstractEnvironment):
             return None
         pos_0 = self.state['targets'][0].position
         pos_1 = self.state['targets'][1].position
-        target_action = pos_1 - pos_0
+        target_action = self._target_action_scale * (pos_1 - pos_0)
         return target_action
     
     def _step(self, agent_input, agent_action):

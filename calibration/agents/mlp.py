@@ -59,7 +59,7 @@ class MLP(abstract_agent.AbstractAgentTorch):
     def __init__(self,
                  name,
                  gain=1.,
-                 target_action_scale=0.1,
+                 target_action_scale=1.,
                  in_features=2,
                  layer_features=(256, 2),
                  batch_size=64,
@@ -173,6 +173,3 @@ class MLP(abstract_agent.AbstractAgentTorch):
         agent_input = self._extract_agent_input(agent_input)
         agent_action = self._eval(agent_input[None], as_numpy=True)[0]
         return agent_action
-    
-    def close(self):
-        pass

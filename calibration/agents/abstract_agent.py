@@ -24,10 +24,6 @@ class AbstractAgent(abc.ABC):
         raise NotImplementedError
     
     @abc.abstractmethod
-    def close(self):
-        raise NotImplementedError
-    
-    @abc.abstractmethod
     def snapshot(self):
         raise NotImplementedError
         
@@ -64,10 +60,6 @@ class AbstractAgentTorch(torch.nn.Module, metaclass=abc.ABCMeta):
     
     @abc.abstractmethod
     def action(self, action):
-        raise NotImplementedError
-    
-    @abc.abstractmethod
-    def close(self):
         raise NotImplementedError
     
     def snapshot(self):
