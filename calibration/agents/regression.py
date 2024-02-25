@@ -8,7 +8,6 @@ from sklearn import linear_model as sklearn_linear_model
 class Regression(abstract_agent.AbstractAgent):
     
     def __init__(self, name):
-        del seed
         self._name = name
         self.data = {}
         self._prev_trial_index = None
