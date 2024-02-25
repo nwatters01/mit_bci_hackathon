@@ -63,9 +63,9 @@ class MLP(abstract_agent.AbstractAgentTorch):
                  in_features=2,
                  layer_features=(256, 2),
                  batch_size=64,
-                 training_steps=1000,
+                 training_steps=100,
                  optimizer='SGD',
-                 lr=0.01,
+                 lr=0.001,
                  grad_clip=1):
         if isinstance(gain, str):
             gain = float(gain)
