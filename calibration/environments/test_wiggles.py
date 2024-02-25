@@ -2,11 +2,12 @@
 
 from matplotlib import pyplot as plt
 import numpy as np
-import wiggles
+import navigation
 
 
 def main():
-    x = wiggles.sample_wiggle()
+    # x = navigation.sample_wiggle()
+    x = navigation.sample_track()
     
     _, ax = plt.subplots()
     ax.scatter(x[:, 0], x[:, 1])
