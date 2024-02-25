@@ -2,18 +2,18 @@
 
 import calibration
 import lsl_api
+import numpy as np
 
 
 def _action_to_wheels(action,
                       speed_intercept=0,
                       speed_gain=1.,
                       rotation_gain=1.,
-                      auto_steer_gain=0.):
+                      highway_gain=0.):
     r, theta = action
-    rot_coef = 1 + auto_steer_gain * (r - speed_intercept)
-    rot = rotation_gain * rot_coef * theta
-    wheel_left = speed_intercept + speed_gain * (r - rot)
-    wheel_right = speed_intercept + speed_gain * (r + rot)
+    rot_gain = rotation_gain * np.exp(-highway_gain * r)
+    wheel_left = speed_intercept + speed_gain * (r - rot_gain * theta)
+    wheel_right = speed_intercept + speed_gain * (r + rot_gain * theta)
     
     return [wheel_left, wheel_right]
 

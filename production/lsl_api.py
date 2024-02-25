@@ -19,15 +19,22 @@ sns.set(style="whitegrid")
 class Stddev():
     
     def __init__(self,
-                 write_file='./data/stddevs_v0.csv',
+                 write_file,
                  timesteps_per_chunk=200,
                  history_chunks=100,
+                #  override_stddevs=None,
+                 override_stddevs=(564.181, 597.882, 530.488, 523.553, 540.935, 561.552, 508.198),
                  n_channels=7):
         self._timesteps_per_chunk = timesteps_per_chunk
         self._n_channels = n_channels
         self._recent_stddevs = []
         self._writer = csv.writer(open(write_file, 'w'))
         self._history_chunks = history_chunks
+        
+        if override_stddevs is None:
+            self._override_stddevs = None
+        else:
+            self._override_stddevs = np.array(override_stddevs)
     
     def __call__(self, data):
         """Process batch of data of shape [n_timesteps, n_channels]."""
@@ -49,7 +56,10 @@ class Stddev():
         self._writer.writerow(to_write)
         
         # Compute mean stddev per channel
-        mean_stddevs = np.mean(self._recent_stddevs, axis=0)
+        if self._override_stddevs is None:
+            mean_stddevs = np.mean(self._recent_stddevs, axis=0)
+        else:
+            mean_stddevs = self._override_stddevs
         
         # Features are normalized stddevs
         features = current_stddevs / mean_stddevs
@@ -209,7 +219,7 @@ class LSLAPI():
         return self._feature_extractor.n_features
             
             
-def get_lsl_api():
+def get_lsl_api(write_file='./data/tmp.csv'):
     logging.debug("looking for an EEG stream...")
     for _ in range(100):
         streams = resolve_stream('type', 'EEG')
@@ -223,7 +233,7 @@ def get_lsl_api():
             
         if target_stream:
             logging.debug("Start aquiring data")
-            feature_extractor = Stddev(write_file='./data/stddevs_v0.csv')
+            feature_extractor = Stddev(write_file=write_file)
             lsl_api = LSLAPI(target_stream, feature_extractor=feature_extractor)
             return lsl_api
     
@@ -249,7 +259,7 @@ def get_noise_api():
 
 
 if __name__ == '__main__':
-    lsl_api = get_lsl_api()
+    lsl_api = get_lsl_api(write_file='./data/stddevs_v0.csv')
     if lsl_api is None:
         exit()
     lsl_api.run_plot_loop()
