@@ -3,7 +3,7 @@
 Usage examples:
 $ python3 calibration.py name=test_v0 stream=noise render_agent=True
 or
-$ python3 calibration.py name=test_v0 stream=lsl_api render_agent=True test=True
+$ python3 calibration.py name=test_v0 stream=lsl_api render_agent=True train=False
 """
 
 import numpy as np
@@ -115,7 +115,7 @@ class Calibrator():
                  snapshot_name=None,
                  render_agent=False,
                  batch_size=64,
-                 training_steps=100,
+                 training_steps=1000,
                  optimizer=torch.optim.SGD,
                  lr=0.001,
                  grad_clip=1):
@@ -137,38 +137,18 @@ class Calibrator():
         self._optimizer = optimizer(self._agent.parameters(), lr=lr)
         self._grad_clip = grad_clip
         
-    
-    def __call__(self, test=False):
-        """Run data collection and training for a trial."""
-        
-        # Run data collection
-        all_inputs = []
-        all_targets = []
-        def _callback(target, fin):
-            if fin:
-                self._gui.root.destroy()
-                
-            features = self._feature_stream()
-            agent_pos = self._agent(features) if self._render_agent else None
-            all_inputs.append(features)
-            all_targets.append(target)
-            return agent_pos
-        self._gui.set_callback(_callback)
-        self._gui.root.after(3, self._gui.step)
-        self._gui.root.mainloop()
-        all_inputs = np.array(all_inputs)
-        all_targets = np.array(all_targets)
-        
-        if test:
-            return
-        
-        # Run training
+    def _train(self):
+        """Run training and save model."""
+        print(f'Training')
+        all_inputs = np.array(self._all_inputs)
+        all_targets = np.array(self._all_targets)
         for _ in range(self._training_steps):
             self._optimizer.zero_grad()
             
             # Sample batch
             batch_inputs, batch_targets = _sample_batch(
-                all_inputs, all_targets, batch_size=self._batch_size)
+                all_inputs, all_targets, batch_size=self._batch_size,
+            )
             batch_outputs = self._agent(batch_inputs, as_numpy=False)
             batch_targets = torch.from_numpy(batch_targets.astype(np.float32))
             
@@ -182,10 +162,37 @@ class Calibrator():
                 torch.nn.utils.clip_grad_norm_(
                     self._agent.parameters(), self._grad_clip)
             self._optimizer.step()
-        
+            
         # Save model
+        print(f'Saving')
         self._agent.snapshot()
+    
+    def __call__(self, train=True):
+        """Run data collection and training for a trial."""
         
+        # Run data collection
+        self._gui.reset()
+        self._all_inputs = []
+        self._all_targets = []
+        def _callback(target, fin):
+            if fin:
+                print('Finished trial.')
+                if train:
+                    self._train()
+                    self._gui.reset()
+                    self._all_inputs = []
+                    self._all_targets = []
+                
+            features = self._feature_stream()
+            agent_pos = self._agent(features) if self._render_agent else None
+            self._all_inputs.append(features)
+            self._all_targets.append(target)
+            return agent_pos
+        self._gui.set_callback(_callback)
+        self._gui.root.after(3, self._gui.step)
+        self._gui.root.mainloop()
+        self._all_inputs = np.array(self._all_inputs)
+        self._all_targets = np.array(self._all_targets)
         
 def _get_boolean_arg(arg, name):
     if arg == 'True' or arg == True:
@@ -201,9 +208,9 @@ def main(name,
          snapshot_name=None,
          render_agent=False,
          stream='lsl',
-         test=False):
+         train=True):
     render_agent = _get_boolean_arg(render_agent, name='render_agent')
-    test = _get_boolean_arg(test, name='test')
+    train = _get_boolean_arg(train, name='train')
     if stream == 'lsl':
         feature_stream = lsl_api.get_lsl_api()
     else:
@@ -217,7 +224,7 @@ def main(name,
         snapshot_name=snapshot_name,
         render_agent=render_agent,
     )
-    calibrator(test=test)
+    calibrator(train=train)
 
 
 if __name__ == '__main__':

@@ -64,16 +64,24 @@ class CalibrationGUI():
                 for _ in range(column_steps):
                     deltas.append((0, -self._step_size))
         self._deltas = deltas
-                
-        self._step_index = 0
+        self.reset()
         
     def set_callback(self, callback):
         self._callback = callback
         
+    def reset(self):
+        self._step_index = 0
+        pos = self.canvas.coords(self.target)
+        delta = (
+            self._buffer - pos[0],
+            self._canvas_height - self._ball_size - self._buffer - pos[1],
+        )
+        self.canvas.move(self.target, delta[0], delta[1])
+        
     def step(self):
         
         if self._step_index == 0:
-            plt.pause(0.1)
+            plt.pause(2)
         
         delta = self._deltas[self._step_index]
         self._step_index += 1
@@ -89,19 +97,18 @@ class CalibrationGUI():
         self._agent_pos = self._callback(target, finished)
         self._agent_pos = [
             self._canvas_width * self._agent_pos[0],
-            self._canvas_height * self._agent_pos[1],
+            -1 * self._canvas_height * self._agent_pos[1],
         ]
         
         if self._agent_pos is not None:
-            try:
-                a = self.canvas.coords(self.agent)
-            except:
-                return
+            a = self.canvas.coords(self.agent)
             d = (self._agent_pos[0] - a[0], self._agent_pos[1] - a[1])
             self.canvas.move(self.agent, d[0], d[1])
         
-        if not finished:
-            self.root.after(10, self.step)
+        if finished:
+            self.reset()
+            
+        self.root.after(10, self.step)
         
     @property
     def n_features(self):

@@ -106,8 +106,12 @@ class LSLAPI():
         self._filt_state = np.tile(zi, (self._n_chan, 1)).transpose()
         
     def __call__(self):
-        samples, timestamps = self._inlet.pull_chunk(
-            timeout=0.01, max_samples=24)
+        
+        while self._inlet.samples > 24:
+            samples, timestamps = self._inlet.pull_chunk(
+                timeout=0.01, max_samples=24)
+        # samples, timestamps = self._inlet.pull_chunk(
+        #     timeout=0.01, max_samples=24)
         
         if timestamps:
             # Dejitter and append times
