@@ -1,0 +1,23 @@
+{
+  "schema": "1.1",
+  "version": "0.3.0",
+  "scripting_backend": "Mono2x",
+  "target": {
+    "operating_system_family": "macosx",
+    "operating_system_64": true
+  },
+  "build": {
+    "sha": "b40e3b2aa826f5479077287051ff5c00fe65158d",
+    "date": "2024-02-21T05:58:26.9316150Z",
+    "operating_system": "Mac OS X 10.15.7",
+    "operating_system_family": "MacOSX",
+    "operating_system_64": true,
+    "dotnet_version": "4.0.30319.42000",
+    "unity_version": "2022.3.20f1",
+    "device_name": "Andrea’s MacBook Pro",
+    "device_model": "MacBookPro11,2",
+    "machine": "Andreas-MacBook-Pro",
+    "user": "afdaniele"
+  }
+}
+

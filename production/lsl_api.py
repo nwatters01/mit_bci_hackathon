@@ -22,8 +22,8 @@ class Stddev():
                  write_file,
                  timesteps_per_chunk=200,
                  history_chunks=100,
-                #  override_stddevs=None,
-                 override_stddevs=(564.181, 597.882, 530.488, 523.553, 540.935, 561.552, 508.198),
+                 override_stddevs=None,
+                #  override_stddevs=(564.181, 597.882, 530.488, 523.553, 540.935, 561.552, 508.198),
                  n_channels=7):
         self._timesteps_per_chunk = timesteps_per_chunk
         self._n_channels = n_channels
@@ -123,7 +123,7 @@ class LSLAPI():
             samples, timestamps = self._inlet.pull_chunk(
                 timeout=0.01, max_samples=24)
         
-        if not timestamps or len(timestamps) == 0:
+        if not timestamps or np.isscalar(timestamps) or len(timestamps) == 0:
             sleep(0.01)
             return self()
         
@@ -223,8 +223,9 @@ def get_lsl_api(write_file='./data/tmp.csv'):
     logging.debug("looking for an EEG stream...")
     for _ in range(100):
         streams = resolve_stream('type', 'EEG')
-        # target_stream_name = "X.on-102106-0035"
-        target_stream_name = "X.on-102801-0068"
+        target_stream_name = "X.on-102106-0035"
+        # target_stream_name = "X.on-102801-0068"
+        # target_stream_name = "X.on-102801-0077"
         target_stream = None
         for stream in streams:
             if stream.name() == target_stream_name:

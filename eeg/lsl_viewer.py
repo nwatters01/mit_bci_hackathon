@@ -190,8 +190,8 @@ if __name__ == '__main__':
     logging.debug("looking for an EEG stream...")
     for _ in range(100):
         streams = resolve_stream('type', 'EEG')
-        # target_stream_name = "X.on-102106-0035"
-        target_stream_name = "X.on-102801-0068"
+        target_stream_name = "X.on-102106-0035"
+        # target_stream_name = "X.on-102801-0068"
         target_stream = None
         for stream in streams:
             if stream.name() == target_stream_name:
