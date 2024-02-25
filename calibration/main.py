@@ -40,7 +40,8 @@ def main(env, name, agent=None, seed=None, **agent_kwargs):
         renderer=renderer, agent=agent_instance)
     
     # Run GUI
-    gui.GUI(env_instance, render_size=int(_GUI_SCALE * _RENDER_SIZE))
+    gui.GUI(
+        env_instance, render_size=int(_GUI_SCALE * _RENDER_SIZE), fps=45)
 
 
 if __name__ == '__main__':

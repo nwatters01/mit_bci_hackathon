@@ -42,9 +42,6 @@ def sample_wiggle(length=50,
         # Compute thetas
         max_turn_length = math.floor(np.abs(max_turn / curvature))
         max_turn_length = min(max_turn_length, max_length)
-        print(f'max_turn = {max_turn}')
-        print(f'curvature = {curvature}')
-        print(f'max_turn_length = {max_turn_length}')
         turn_length = np.random.randint(1, max_turn_length)
         for _ in range(turn_length):
             thetas.append(thetas[-1] + curvature)
@@ -144,7 +141,7 @@ class NavBase(abstract_environment.AbstractEnvironment):
                  backwards_prob=0.5,
                  ready_steps=30,
                  set_steps=30,
-                 timeout_steps=300,
+                 timeout_steps=600,
                  render_agent_action=True,
                  origin=(0.5, 0.05)):
         """Constructor."""
