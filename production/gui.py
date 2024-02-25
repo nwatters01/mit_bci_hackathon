@@ -83,7 +83,7 @@ class CalibrationGUI():
         target = self.canvas.coords(self.target)
         target = np.array([
             float(target[0]) / self._canvas_width,
-            float(target[1]) / self._canvas_width,
+            -1 * float(target[1]) / self._canvas_width,
         ])
         
         self._agent_pos = self._callback(target, finished)
