@@ -3,6 +3,20 @@
 import calibration
 import lsl_api
 
+
+def _action_to_wheels(action,
+                      speed_intercept=0,
+                      speed_gain=1.,
+                      rotation_gain=1.,
+                      auto_steer_gain=0.):
+    r, theta = action
+    rot_coef = 1 + auto_steer_gain * (r - speed_intercept)
+    rot = rotation_gain * rot_coef * theta
+    wheel_left = speed_intercept + speed_gain * (r - rot)
+    wheel_right = speed_intercept + speed_gain * (r + rot)
+    
+    return [wheel_left, wheel_right]
+
     
 class DuckieController():
     
@@ -19,5 +33,6 @@ class DuckieController():
         """Get 2-dimensional action for duckie bot."""
         features = self._feature_stream()
         action = self._agent(features)
-        return action
+        wheels = _action_to_wheels(action)
+        return wheels
         

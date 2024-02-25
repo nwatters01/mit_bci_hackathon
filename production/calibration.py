@@ -1,9 +1,9 @@
 """Calibration.
 
 Usage examples:
-$ python3 calibration.py name=test_v0 stream=noise render_agent=True
+$ python3 calibration.py name=test_v0 stream=noise
 or
-$ python3 calibration.py name=test_v0 stream=lsl_api render_agent=True train=False
+$ python3 calibration.py name=test_v0 stream=lsl_api train=False
 """
 
 import numpy as np
@@ -113,7 +113,7 @@ class Calibrator():
                  feature_stream,
                  gui,
                  snapshot_name=None,
-                 render_agent=False,
+                 render_agent=True,
                  batch_size=64,
                  training_steps=1000,
                  optimizer=torch.optim.SGD,
@@ -206,7 +206,7 @@ def _get_boolean_arg(arg, name):
         
 def main(name,
          snapshot_name=None,
-         render_agent=False,
+         render_agent=True,
          stream='lsl',
          train=True):
     render_agent = _get_boolean_arg(render_agent, name='render_agent')

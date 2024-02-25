@@ -11,8 +11,8 @@ class CalibrationGUI():
                  n_levels=5,
                  step_size=3,
                  ball_size=20,
-                 canvas_width=500,
-                 canvas_height=500,
+                 canvas_width=800,
+                 canvas_height=800,
                  buffer=10):
         self._n_levels = n_levels
         self._step_size = step_size
@@ -66,17 +66,35 @@ class CalibrationGUI():
         self._deltas = deltas
         self.reset()
         
+    def _coords_to_pos(self, coords):
+        w = float(coords[0]) / self._canvas_width
+        w = 2 * w - 1
+        h = 1. - float(coords[1]) / self._canvas_width
+        return np.array([w, h])
+    
+    def _pos_to_coords(self, pos):
+        w = self._canvas_width * 0.5 * (1 + pos[0])
+        h = self._canvas_height * (1. - pos[1])
+        return (w, h)
+    
+    def _move_object(self, obj, target_coords):
+        current_coords = self.canvas.coords(obj)
+        delta = (
+            target_coords[0] - current_coords[0],
+            target_coords[1] - current_coords[1],
+        )
+        self.canvas.move(obj, delta[0], delta[1])
+        
     def set_callback(self, callback):
         self._callback = callback
         
     def reset(self):
         self._step_index = 0
-        pos = self.canvas.coords(self.target)
-        delta = (
-            self._buffer - pos[0],
-            self._canvas_height - self._ball_size - self._buffer - pos[1],
+        target_coords = (
+            self._buffer,
+            self._canvas_height - self._ball_size - self._buffer,
         )
-        self.canvas.move(self.target, delta[0], delta[1])
+        self._move_object(self.target, target_coords)
         
     def step(self):
         
@@ -88,22 +106,11 @@ class CalibrationGUI():
         
         finished = self._step_index >= len(self._deltas)
         self.canvas.move(self.target, delta[0], delta[1])
-        target = self.canvas.coords(self.target)
-        target = np.array([
-            float(target[0]) / self._canvas_width,
-            -1 * float(target[1]) / self._canvas_width,
-        ])
-        
-        self._agent_pos = self._callback(target, finished)
-        self._agent_pos = [
-            self._canvas_width * self._agent_pos[0],
-            -1 * self._canvas_height * self._agent_pos[1],
-        ]
-        
-        if self._agent_pos is not None:
-            a = self.canvas.coords(self.agent)
-            d = (self._agent_pos[0] - a[0], self._agent_pos[1] - a[1])
-            self.canvas.move(self.agent, d[0], d[1])
+        target = self._coords_to_pos(self.canvas.coords(self.target))
+        agent_pos = self._callback(target, finished)
+        if agent_pos is not None:
+            agent_coords = self._pos_to_coords(agent_pos)
+            self._move_object(self.agent, agent_coords)
         
         if finished:
             self.reset()

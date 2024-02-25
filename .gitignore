@@ -10,4 +10,5 @@
 
 calibration/snapshots**
 production/snapshots**
+production/data**
 eeg/data**

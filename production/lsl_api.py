@@ -107,11 +107,15 @@ class LSLAPI():
         
     def __call__(self):
         
-        while self._inlet.samples > 24:
+        samples, timestamps = self._inlet.pull_chunk(
+                timeout=0.01, max_samples=24)
+        while self._inlet.samples_available() > 50:
             samples, timestamps = self._inlet.pull_chunk(
                 timeout=0.01, max_samples=24)
-        # samples, timestamps = self._inlet.pull_chunk(
-        #     timeout=0.01, max_samples=24)
+        
+        if not timestamps or len(timestamps) == 0:
+            sleep(0.01)
+            return self()
         
         if timestamps:
             # Dejitter and append times
@@ -153,8 +157,7 @@ class LSLAPI():
             self._ax_raw.set_xlim(-self._window, 0)
             
             plot_data = np.copy(self._features[::self._subsample_plot])
-            plot_data -= np.nanmean(plot_data, axis=0, keepdims=True)
-            plot_data /= 3 * np.nanstd(plot_data, axis=0, keepdims=True)
+            plot_data = 0.5 * (plot_data - 0.5)
             for chan in range(self._n_feat):
                 self.lines_feat[chan].set_xdata(
                     self._times[::self._subsample_plot] - self._times[-1])
@@ -210,7 +213,8 @@ def get_lsl_api():
     logging.debug("looking for an EEG stream...")
     for _ in range(100):
         streams = resolve_stream('type', 'EEG')
-        target_stream_name = "X.on-102106-0035"
+        # target_stream_name = "X.on-102106-0035"
+        target_stream_name = "X.on-102801-0068"
         target_stream = None
         for stream in streams:
             if stream.name() == target_stream_name:
