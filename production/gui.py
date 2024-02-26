@@ -9,7 +9,7 @@ class CalibrationGUI():
     
     def __init__(self,
                  n_levels=5,
-                 step_size=3,
+                 step_size=4,
                  ball_size=20,
                  canvas_width=800,
                  canvas_height=800,

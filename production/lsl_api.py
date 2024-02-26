@@ -15,20 +15,27 @@ logging.basicConfig(level=logging.DEBUG,
 
 sns.set(style="whitegrid")
 
+_TIMEOUT = 0.01
+
 
 class Stddev():
     
     def __init__(self,
-                 write_file,
+                 write_file=None,
                  timesteps_per_chunk=200,
                  history_chunks=100,
-                 override_stddevs=None,
-                #  override_stddevs=(564.181, 597.882, 530.488, 523.553, 540.935, 561.552, 508.198),
+                #  override_stddevs=None,
+                #  override_stddevs=(564.181, 597.882, 530.488, 523.553, 540.935, 561.552, 508.198),]
+                #  override_stddevs=7 * [50.],
+                override_stddevs=[21.749,19.686,13.935,12.534,26.9,14.019,13.9],
                  n_channels=7):
         self._timesteps_per_chunk = timesteps_per_chunk
         self._n_channels = n_channels
         self._recent_stddevs = []
-        self._writer = csv.writer(open(write_file, 'w'))
+        if write_file is not None:
+            self._writer = csv.writer(open(write_file, 'w'))
+        else:
+            self._writer = None
         self._history_chunks = history_chunks
         
         if override_stddevs is None:
@@ -53,7 +60,8 @@ class Stddev():
             
         # write stddevs to csv
         to_write = [str(x) for x in current_stddevs]
-        self._writer.writerow(to_write)
+        if self._writer is not None:
+            self._writer.writerow(to_write)
         
         # Compute mean stddev per channel
         if self._override_stddevs is None:
@@ -124,10 +132,15 @@ class LSLAPI():
                 timeout=0.01, max_samples=24)
         
         if not timestamps or np.isscalar(timestamps) or len(timestamps) == 0:
-            sleep(0.01)
+            sleep(_TIMEOUT)
+            return self()
+        # print(timestamps)
+        if not (isinstance(timestamps, list) and len(timestamps) > 1):
+            sleep(_TIMEOUT)
             return self()
         
         if timestamps:
+            # print(samples[:5])
             # Dejitter and append times
             num_new_samples = len(timestamps)
             timestamps = np.float64(np.arange(num_new_samples)) / self._sfreq
@@ -175,8 +188,8 @@ class LSLAPI():
             self._ax_feat.set_xlim(-self._window, 0)
             
             self._fig.canvas.draw()
-            plt.pause(0.01)
-            sleep(0.01)
+            plt.pause(_TIMEOUT)
+            sleep(_TIMEOUT)
                 
     def run_plot_loop(self):
         sns.despine(left=True)
@@ -219,13 +232,12 @@ class LSLAPI():
         return self._feature_extractor.n_features
             
             
-def get_lsl_api(write_file='./data/tmp.csv'):
+def get_lsl_api(write_file=None):
     logging.debug("looking for an EEG stream...")
     for _ in range(100):
         streams = resolve_stream('type', 'EEG')
-        target_stream_name = "X.on-102106-0035"
-        # target_stream_name = "X.on-102801-0068"
-        # target_stream_name = "X.on-102801-0077"
+        # target_stream_name = "X.on-102106-0035"
+        target_stream_name = "X.on-102801-0070"
         target_stream = None
         for stream in streams:
             if stream.name() == target_stream_name:
@@ -252,7 +264,7 @@ class NoiseAPI():
         
     @property
     def n_features(self):
-        return self._n_features
+        return self._n_features, None
 
 
 def get_noise_api():
@@ -260,7 +272,7 @@ def get_noise_api():
 
 
 if __name__ == '__main__':
-    lsl_api = get_lsl_api(write_file='./data/stddevs_v0.csv')
+    lsl_api = get_lsl_api(write_file='./data/stddevs_nick_v0.csv')
     if lsl_api is None:
         exit()
     lsl_api.run_plot_loop()

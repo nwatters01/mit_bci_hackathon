@@ -6,13 +6,12 @@ or
 $ python3 calibration.py name=test_v0 stream=lsl_api train=False
 """
 
-import numpy as np
 import gui as gui_lib
+import numpy as np
 import lsl_api
-
-import torch
 from pathlib import Path
 import sys
+import torch
 
 _SNAPSHOT_DIR = Path('./snapshots')
 
@@ -66,11 +65,6 @@ class Agent(torch.nn.Module):
         self._name = name
         self._snapshot_path = _SNAPSHOT_DIR / name
         
-        # if self._snapshot_path.exists():
-        #     raise ValueError(
-        #         f'Cannot override path {self._snapshot_path}'
-        #     )
-        
         self._net = MLP(
             in_features=in_features,
             layer_features=(256, 256, out_features),
@@ -114,10 +108,10 @@ class Calibrator():
                  gui,
                  snapshot_name=None,
                  render_agent=True,
-                 batch_size=64,
-                 training_steps=1000,
+                 batch_size=128,
+                 training_steps=2000,
                  optimizer=torch.optim.SGD,
-                 lr=0.001,
+                 lr=0.01,
                  grad_clip=1):
         self._feature_stream = feature_stream
         self._gui = gui
@@ -183,7 +177,8 @@ class Calibrator():
                     self._all_inputs = []
                     self._all_targets = []
                 
-            features = self._feature_stream()
+            features, _ = self._feature_stream()
+            # print(features)
             agent_pos = self._agent(features) if self._render_agent else None
             self._all_inputs.append(features)
             self._all_targets.append(target)
@@ -194,6 +189,7 @@ class Calibrator():
         self._all_inputs = np.array(self._all_inputs)
         self._all_targets = np.array(self._all_targets)
         
+
 def _get_boolean_arg(arg, name):
     if arg == 'True' or arg == True:
         arg = True
@@ -213,8 +209,10 @@ def main(name,
     train = _get_boolean_arg(train, name='train')
     if stream == 'lsl':
         feature_stream = lsl_api.get_lsl_api()
-    else:
+    elif stream == 'noise':
         feature_stream = lsl_api.get_noise_api()
+    else:
+        raise ValueError(f'Invalid stream {stream}')
     gui = gui_lib.CalibrationGUI()
     
     calibrator = Calibrator(
