@@ -1,14 +1,8 @@
 # Ignore these files when committing to git
 
-
 **/__pycache__
 **/.ipynb_checkpoints
 **.DS_Store
 **.vscode
 **.pyc
 **.idea**
-
-calibration/snapshots**
-production/snapshots**
-production/data**
-eeg/data**

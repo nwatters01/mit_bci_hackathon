@@ -40,7 +40,7 @@ def _get_kernel(window, rebound_magnitude=0, rebound_delay=None):
     
     With just smoothing alone, it is difficult to prevent over-turning.
     Specifically, since we use right/left jaw-clenching as our EMG control, it
-    is difficult for the driver to sapidly switch between left and right turns.
+    is difficult for the driver to rapidly switch between left and right turns.
     As a result it is much easier to rapidly correct for under-turning (where
     correcting requires clenching harder on the same side) than over-turning
     (where correcting requires clenching on the other side). Consequently, we
