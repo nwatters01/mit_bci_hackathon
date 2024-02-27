@@ -27,7 +27,7 @@ details.
 To map (rotation, speed) actions to robot wheel speeds, we implemented a control
 policy that set wheel speed differential proportional to the rotation. This
 control policy included a few extra tricks, like smoothing and turn rebounding.
-See `duckie.py` for details.
+See `run_duckie.py` for details.
 
 ## Installation and setup
 
