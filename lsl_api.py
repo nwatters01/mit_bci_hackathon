@@ -1,5 +1,17 @@
-"""LSL API."""
+"""LSL API and entrypoint to view data and feature streams.
 
+To view data and feature streams, run
+$ python3 lsl_api.py
+
+You may want to modify the _TARGET_STREAM, _WRITE_FILE, and _BASELINE_STDDEVS
+parameters. See documentation below for descriptions of those.
+
+This file is loosely based on the LSL viewer in BciPy:
+https://github.com/CAMBI-tech/BciPy/blob/72053718855a602d146d5dadc235b9f0fa14b94a/bcipy/signal/viewer/lsl_viewer.py
+"""
+
+import csv
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import lfilter, lfilter_zi, firwin
@@ -7,44 +19,71 @@ from time import sleep
 from pylsl import StreamInlet, resolve_stream
 import seaborn as sns
 
-import csv
-import logging
-
 logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s',)
-
 sns.set(style="whitegrid")
 
+# Target stream name for EEG headset
+_TARGET_STREAM = "X.on-102801-0070"
+# Filename to write stddev features to
+_WRITE_FILE = './data/stddevs_nw_v0.csv'
+# Baseline stddev for each channel. Set to None to infer this from data
+_BASELINE_STDDEVS = (21.7, 19.7, 13.9, 12.5, 26.9, 14.0, 13.9)
+# How long to wait (in seconds) between re-trying samples.
 _TIMEOUT = 0.01
 
 
-class Stddev():
+class StddevFeatures():
+    """Feature extractor that takes local stddev of each channel."""
     
     def __init__(self,
                  write_file=None,
                  timesteps_per_chunk=200,
                  history_chunks=100,
-                #  override_stddevs=None,
-                #  override_stddevs=(564.181, 597.882, 530.488, 523.553, 540.935, 561.552, 508.198),]
-                #  override_stddevs=7 * [50.],
-                override_stddevs=[21.749,19.686,13.935,12.534,26.9,14.019,13.9],
+                 baseline_stddevs=_BASELINE_STDDEVS,
                  n_channels=7):
-        self._timesteps_per_chunk = timesteps_per_chunk
+        """Constructor.
+        
+        Args:
+            write_file: None or string. If string, path to a csv file to write
+                stddev of each channel to. This is useful for figuring out the
+                baseline stddev of each channel.
+            timesteps_per_chunk: Number of streaming steps to use for each
+                feature computation. This is only set as a property here, but is
+                used in LSLAPI().
+            history_chunks: Number of recent data chunks to use for computing
+                the baseline stddev per channel. If baseline_stddevs is not
+                None, this is not used. In practice the EEG streaming sample
+                rate is ~400Hz, so 200 corresponds to half a second, which works
+                pretty well.
+            baseline_stddevs: None or iterable of length n_channels. If None,
+                the baseline (mean) stddev for each channel is computed on a
+                rolling basis using the last history_chunks data chunks. If not
+                None, specifies the baseline stddev for each channel. This
+                baseline stddev is used to normalize the momentary stddev for
+                each channel.
+            n_channels: Number of channels. Only the first n_channels channels
+                of the input data are used for feature computation. Default is 7
+                because the EEG data has only 7 EEG channels (the rest of the
+                channels are accelerometer data and stuff we do not want).
+        """
         self._n_channels = n_channels
+        self._timesteps_per_chunk = timesteps_per_chunk
+        self._history_chunks = history_chunks
         self._recent_stddevs = []
+        
         if write_file is not None:
             self._writer = csv.writer(open(write_file, 'w'))
         else:
             self._writer = None
-        self._history_chunks = history_chunks
         
-        if override_stddevs is None:
-            self._override_stddevs = None
+        if baseline_stddevs is None:
+            self._baseline_stddevs = None
         else:
-            self._override_stddevs = np.array(override_stddevs)
+            self._baseline_stddevs = np.array(baseline_stddevs)
     
     def __call__(self, data):
-        """Process batch of data of shape [n_timesteps, n_channels]."""
+        """Process batch of data of shape [timesteps_per_chunk, n_channels]."""
         
         # Trim unused channels
         data = data[:, :self._n_channels]
@@ -52,25 +91,25 @@ class Stddev():
         # Zero-mean the data
         data -= np.nanmean(data, axis=0, keepdims=True)
         
-        # Append stddevs to self._recent_stddevs
+        # Compute current stddevs
         current_stddevs = np.nanstd(data, axis=0)
-        self._recent_stddevs.append(current_stddevs)
-        if len(self._recent_stddevs) > self._history_chunks:
-            self._recent_stddevs.pop(0)
-            
-        # write stddevs to csv
-        to_write = [str(x) for x in current_stddevs]
+        
+        # write stddevs to csv if necessary
         if self._writer is not None:
+            to_write = [str(x) for x in current_stddevs]
             self._writer.writerow(to_write)
         
-        # Compute mean stddev per channel
-        if self._override_stddevs is None:
-            mean_stddevs = np.mean(self._recent_stddevs, axis=0)
+        # Compute baseline (mean) stddev per channel
+        if self._baseline_stddevs is None:
+            self._recent_stddevs.append(current_stddevs)
+            if len(self._recent_stddevs) > self._history_chunks:
+                self._recent_stddevs.pop(0)
+            baseline_stddevs = np.mean(self._recent_stddevs, axis=0)
         else:
-            mean_stddevs = self._override_stddevs
+            baseline_stddevs = self._baseline_stddevs
         
         # Features are normalized stddevs
-        features = current_stddevs / mean_stddevs
+        features = current_stddevs / baseline_stddevs
         
         return features
     
@@ -84,6 +123,7 @@ class Stddev():
     
 
 class LSLAPI():
+    """LSL API for streaming and plotting EEG data."""
 
     def __init__(self,
                  stream,
@@ -92,7 +132,17 @@ class LSLAPI():
                  buf=1,
                  subsample_plot=3,
                  plot=True):
-        """Init"""
+        """Constructor.
+        
+        Args:
+            stream: LSL data stream.
+            feature_extractor: Callable mapping data -> features.
+            window: Scalar. Window size in seconds for data caching and
+                plotting.
+            buf: Int. Number of second for the data stream buffer.
+            subsample_plot: Int. Stride for subsampling data when plotting.
+            plot: Bool. Whether to plot data stream real-time.
+        """
         self._feature_extractor = feature_extractor
         self._n_feat = self._feature_extractor.n_features
         self._window = window
@@ -124,6 +174,12 @@ class LSLAPI():
         self._filt_state = np.tile(zi, (self._n_chan, 1)).transpose()
         
     def __call__(self):
+        """Return current vector of features.
+        
+        Returns:
+            features: Numpy array of shape [n_features]. Features for the most
+                recent chunk of streamed data.
+        """
         
         samples, timestamps = self._inlet.pull_chunk(
                 timeout=0.01, max_samples=24)
@@ -131,45 +187,45 @@ class LSLAPI():
             samples, timestamps = self._inlet.pull_chunk(
                 timeout=0.01, max_samples=24)
         
-        if not timestamps or np.isscalar(timestamps) or len(timestamps) == 0:
-            sleep(_TIMEOUT)
-            return self()
-        # print(timestamps)
         if not (isinstance(timestamps, list) and len(timestamps) > 1):
             sleep(_TIMEOUT)
             return self()
         
-        if timestamps:
-            # print(samples[:5])
-            # Dejitter and append times
-            num_new_samples = len(timestamps)
-            timestamps = np.float64(np.arange(num_new_samples)) / self._sfreq
-            timestamps += self._times[-1] + 1. / self._sfreq
-            self._times = np.concatenate([self._times, timestamps])
-            self._n_samples = int(self._sfreq * self._window)
-            self._times = self._times[-self._n_samples:]
-            
-            # Add new data
-            filt_samples, self._filt_state = lfilter(
-                self._bf, self._af, samples, axis=0, zi=self._filt_state)
-            self._data = np.vstack([self._data, filt_samples])
-            self._data = self._data[-self._n_samples:]
+        # Dejitter and append times
+        num_new_samples = len(timestamps)
+        timestamps = np.float64(np.arange(num_new_samples)) / self._sfreq
+        timestamps += self._times[-1] + 1. / self._sfreq
+        self._times = np.concatenate([self._times, timestamps])
+        self._n_samples = int(self._sfreq * self._window)
+        self._times = self._times[-self._n_samples:]
+        
+        # Add new data
+        filt_samples, self._filt_state = lfilter(
+            self._bf, self._af, samples, axis=0, zi=self._filt_state)
+        self._data = np.vstack([self._data, filt_samples])
+        self._data = self._data[-self._n_samples:]
         
         # Return new features
-        new_features = self._feature_extractor(
+        features = self._feature_extractor(
             self._data[-self._feature_extractor.timesteps_per_chunk:])
         
-        return new_features, num_new_samples
+        # Update self._features by the tiled features
+        if self._plot:
+            features_tiled = features[None] * np.ones((num_new_samples, 1))
+            self._features = np.vstack([self._features, features_tiled])
+            self._features = self._features[-self._n_samples:]
+        
+        return features
         
     def update_plot(self, update):
-        new_features, num_new_samples = self.__call__()
-        new_features_vec = (
-            new_features[None] * np.ones((num_new_samples, 1)))
-        self._features = np.vstack([self._features, new_features_vec])
-        self._features = self._features[-self._n_samples:]
+        """Update plot of data and features."""
+        
+        # Call to read and cache new samples from the inlet stream.
+        _ = self.__call__()
         
         # Plot if necessary
         if self._plot and update:
+            # Update data plot
             plot_data = np.copy(self._data[::self._subsample_plot])
             plot_data -= np.nanmean(plot_data, axis=0, keepdims=True)
             plot_data /= 3 * np.nanstd(plot_data, axis=0, keepdims=True)
@@ -179,6 +235,7 @@ class LSLAPI():
                 self.lines_data[chan].set_ydata(plot_data[:, chan] - chan)
             self._ax_raw.set_xlim(-self._window, 0)
             
+            # Update features plot
             plot_data = np.copy(self._features[::self._subsample_plot])
             plot_data = 0.5 * (plot_data - 0.5)
             for chan in range(self._n_feat):
@@ -189,9 +246,10 @@ class LSLAPI():
             
             self._fig.canvas.draw()
             plt.pause(_TIMEOUT)
-            sleep(_TIMEOUT)
                 
     def run_plot_loop(self):
+        """Run a plotting loop to show streamed data and features."""
+        
         sns.despine(left=True)
         self._fig, axes = plt.subplots(2, 1, figsize=(6, 8))
         self._ax_raw, self._ax_feat = axes
@@ -225,19 +283,27 @@ class LSLAPI():
         while True:
             update = update_index % self._display_every == 0
             self.update_plot(update=update)
-            update += 1
+            update_index += 1
             
     @property
     def n_features(self):
         return self._feature_extractor.n_features
             
             
-def get_lsl_api(write_file=None):
+def get_lsl_api(target_stream_name=_TARGET_STREAM, write_file=None):
+    """Get LSL API for given EEG stream name.
+    
+    Args:
+        target_stream_name: String. Name of target stream.
+        write_file: None or string. If string, path to file to write stddev
+            features.
+    """
+    
     logging.debug("looking for an EEG stream...")
+    # Loop for a while to look for the EEG stream, because sometimes the stream
+    # is not found by resolve_stream() even when it exists
     for _ in range(100):
         streams = resolve_stream('type', 'EEG')
-        # target_stream_name = "X.on-102106-0035"
-        target_stream_name = "X.on-102801-0070"
         target_stream = None
         for stream in streams:
             if stream.name() == target_stream_name:
@@ -246,7 +312,7 @@ def get_lsl_api(write_file=None):
             
         if target_stream:
             logging.debug("Start aquiring data")
-            feature_extractor = Stddev(write_file=write_file)
+            feature_extractor = StddevFeatures(write_file=write_file)
             lsl_api = LSLAPI(target_stream, feature_extractor=feature_extractor)
             return lsl_api
     
@@ -255,6 +321,7 @@ def get_lsl_api(write_file=None):
 
 
 class NoiseAPI():
+    """Noise API mimicking LSL API except returning noise features."""
     
     def __init__(self, n_features=7):
         self._n_features = n_features
@@ -264,7 +331,7 @@ class NoiseAPI():
         
     @property
     def n_features(self):
-        return self._n_features, None
+        return self._n_features
 
 
 def get_noise_api():
@@ -272,7 +339,8 @@ def get_noise_api():
 
 
 if __name__ == '__main__':
-    lsl_api = get_lsl_api(write_file='./data/stddevs_nick_v0.csv')
+    """Run streaming and plotting."""
+    lsl_api = get_lsl_api(write_file=_WRITE_FILE)
     if lsl_api is None:
         exit()
     lsl_api.run_plot_loop()
