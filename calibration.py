@@ -3,16 +3,19 @@
 Run a calibration protocol, using either noise features or EEG features.
 
 To run using noise features, run:
-    $ python3 calibration.py name=YOUR_NAME stream=noise
+    $ python3 calibration.py name=$YOUR_NAME stream=noise
 
 To run using EEG features, run:
-    $ python3 calibration.py name=YOUR_NAME stream=lsl_api
+    $ python3 calibration.py name=$YOUR_NAME stream=lsl_api
+    
+To fine-tune a previously run snapshot, run:
+    $ python3 calibration.py name=$NEW_MODEL_NAME stream=lsl_api \
+        snapshot_name=$SNAPSHOT_NAME
     
 The string $YOUR_NAME is an identified to label this calibration, and points to
 the file in the ./snapshots/ directory that contains the parameters fit by this
 calibration. If you want to avoid overriding a calibration, use a different name
 for future calibration runs.
-
 
 The calibration learns the mapping between the input space (EEG or noise) and
 the (rotation, speed) action space for the duckie. The action space is

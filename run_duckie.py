@@ -16,7 +16,7 @@ SIMULATION = False
 _ACTION_TO_WHEELS_PARAMS = dict(
     rotation_bias=-0.15,
     rotation_gain=0.24,
-    speed=0.73,
+    max_speed=0.73,
     turn_slowdown=0.75,
 )
 # Parameters for rotation kernel. See _get_kernel() for documentation.
@@ -47,9 +47,8 @@ def _get_kernel(window, rebound_magnitude=0, rebound_delay=None):
     include an automatic correction for over-turning, namely a "rebound"
     feature in the smoothing kernel.
     
-    If rebound_delay is not None, then the kernel also has a
-    "rebound" which include a negative triangular window component for more
-    distant history.
+    If rebound_delay is not None, then the kernel has a "rebound" which is a
+    negative triangular window component for more distant history.
     
     Args:
         window: Int. Window size of the positive component of the kernel. If
@@ -142,7 +141,7 @@ class DuckieControllerEEG():
                           action, 
                           rotation_bias,
                           rotation_gain,
-                          speed,
+                          max_speed,
                           turn_slowdown):
         """Convert action to wheel speeds.
         
@@ -158,7 +157,7 @@ class DuckieControllerEEG():
                 turning right too much, negative means turning left too much.
             rotation_gain: Scalar. Gain on rotation. Higher means more sensitive
                 turning.
-            speed: Scalar. Maximum speed of the duckie wheels.
+            max_speed: Scalar. Maximum speed of the duckie wheels.
             turn_slowdown: Scalar. Linear scaling factor by which speed is
                 reduced as a function of rotation magnitude. This slows the
                 duckie down during turns, which helps for better control.
@@ -178,11 +177,11 @@ class DuckieControllerEEG():
         print(f'Average rotation = {mean_recent_rotation}')
         
         # Compute the speed
-        speed *= (1 - turn_slowdown * np.abs(rotation))
+        max_speed *= (1 - turn_slowdown * np.abs(rotation))
         
         # Convert to wheel coordinates
-        wheel_left = speed + rotation_gain * rotation
-        wheel_right = speed - rotation_gain * rotation
+        wheel_left = max_speed + rotation_gain * rotation
+        wheel_right = max_speed - rotation_gain * rotation
         
         return [wheel_left, wheel_right]
     

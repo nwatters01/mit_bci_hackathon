@@ -13,12 +13,12 @@ Our approach was to use the following pipeline:
 [EEG input] -> [EEG features] -> [Calibrated (rotation, speed) actions] ->
 [robot wheel speeds]
 
-The convert EEG input to EEG features, we first filtered the data with a finite
+To convert EEG input to EEG features, we first filtered the data with a finite
 impulse response filter, then took the rolling standdard deviation of each EEG
 channel (which roughly corresponds to the envelope of the EEG). See `lsl_api.py`
 for details.
 
-To conver EEG features to calibrated (rotation, speed) actions, we ran a
+To convert EEG features to calibrated (rotation, speed) actions, we ran a
 calibration protocol during which a subject tracked a ball representing
 (rotation, speed) as it traversed a display, and an MLP neural network learned
 the mapping from EEG features to (rotation, speed). See `calibration.py` for
@@ -80,8 +80,8 @@ for stream in streams:
 Follow the instructions on the
 [hackathon website](https://bci-i.github.io/hackathon-materials) to set up
 duckiematrix. Note that it requires native python (no virtual environment) and
-only works on some computers (notably does not work on apple computer with M1 or
-M2 chips).
+only works on some computers (does not work on apple computer with M1 or M2
+chips).
 
 ### Dependencies
 
