@@ -1,7 +1,7 @@
 # Code for MIT BCI Hackathon on Feb 25, 2024.
 
 This code was written by Nick Watters, John Gabel, and Mahdi Ramadan. It
-implements their (winnin) solution for the
+implements their (winning) solution for the
 [MIT BCI Hackathon](https://bci-i.github.io/hackathon) on Feb 25, 2024. The
 hackathon involved controlling a duckie robot using an EEG headset. The goal was
 to navigate an obstacle course accurately and efficiently.
