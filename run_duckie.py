@@ -11,6 +11,9 @@ import sys
 # robot
 SIMULATION = False
 
+# Snapshot from calibration to use for control
+_CALIBRATION_SNAPSHOT = 'cal_nw_1_v2'
+
 # Parameters for converting actions to wheels. See
 # DuckieController._action_to_wheels() for documentation
 _ACTION_TO_WHEELS_PARAMS = dict(
@@ -195,7 +198,7 @@ class DuckieControllerEEG():
 
 def main():
     """Main loop to control robot."""
-    controller = DuckieControllerEEG(snapshot_name='cal_nw_1_v2')
+    controller = DuckieControllerEEG(snapshot_name=_CALIBRATION_SNAPSHOT)
 
     # Wait until console input to start
     input('Press ENTER to start')

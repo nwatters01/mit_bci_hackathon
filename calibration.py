@@ -6,10 +6,10 @@ To run using noise features, run:
     $ python3 calibration.py name=$YOUR_NAME stream=noise
 
 To run using EEG features, run:
-    $ python3 calibration.py name=$YOUR_NAME stream=lsl_api
+    $ python3 calibration.py name=$YOUR_NAME stream=lsl
     
 To fine-tune a previously run snapshot, run:
-    $ python3 calibration.py name=$NEW_MODEL_NAME stream=lsl_api \
+    $ python3 calibration.py name=$NEW_MODEL_NAME stream=lsl \
         snapshot_name=$SNAPSHOT_NAME
     
 The string $YOUR_NAME is an identified to label this calibration, and points to

@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.DEBUG,
 sns.set(style="whitegrid")
 
 # Target stream name for EEG headset
-_TARGET_STREAM = "X.on-102801-0070"
+_TARGET_STREAM = "X.on-102106-0035"
 # Filename to write stddev features to
 _WRITE_FILE = './data/stddevs_nw_v0.csv'
 # Baseline stddev for each channel. Set to None to infer this from data
